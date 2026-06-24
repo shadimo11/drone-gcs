@@ -12,8 +12,9 @@ export interface GcsBridge {
   connect(opts: { port: string | null; baud: number; mock: boolean }): Promise<void>;
   disconnect(): Promise<void>;
   sendCommand(cmd: UplinkCommand): Promise<void>;
-  startLog(): Promise<{ path: string }>;
+  startLog(opts?: { dir?: string }): Promise<{ path: string }>;
   stopLog(): Promise<{ path: string; rows: number }>;
+  chooseSaveDir(): Promise<string | null>;
 
   onTelemetry(cb: (t: Telemetry, meta: { suspect: boolean; reasons: string[] }) => void): () => void;
   onLink(cb: (status: LinkStatus, detail?: string) => void): () => void;

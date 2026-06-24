@@ -27,22 +27,21 @@ export const DOWNLINK_PAYLOAD_SIZE = 32;
 
 // Fixed-point scaling factors (multiply on encode, divide on decode)
 export const SCALE = {
-  PID: 1000, // ANG_*, POS_* gains
+  PID: 1, // ANG_*, POS_* gains — sent as raw integers, firmware uses them directly (max 100)
   POS_ANG_SP: 10,
   LAND_SPEED: 100,
-  ATTITUDE: 100, // *_FB angle feedback
-  CMD_SETPOINT: 1000, // *_CMD feedback values
-  LATLON: 1e7, // geodetic degrees
-  BATTERY: 10, // volts
+  ATTITUDE: 100,       // *_FB angle feedback
+  CMD_SETPOINT: 1000,  // *_CMD feedback values
+  LATLON: 1e7,         // geodetic degrees
+  BATTERY: 10,         // volts
 } as const;
 
-// Drone command opcodes carried in Drone_CMD (uint8). Adjust to match firmware.
+// Drone command opcodes — DISARM=0, LAND=1, TAKEOFF=2
+// ARM is removed: the drone arms automatically on boot.
 export const DRONE_CMD = {
-  NONE: 0,
-  ARM: 1,
-  DISARM: 2,
-  TAKEOFF: 3,
-  LAND: 4,
+  DISARM:  0,
+  LAND:    1,
+  TAKEOFF: 2,
 } as const;
 export type DroneCmd = (typeof DRONE_CMD)[keyof typeof DRONE_CMD];
 

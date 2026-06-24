@@ -7,11 +7,12 @@ import { AttitudePanel, ClockPanel, TelemetryCard, FlightControls } from './pane
 import { WaypointList, MissionLog } from './panels/MissionPanels.tsx';
 import { PidConfigModal } from './panels/PidConfigModal.tsx';
 import { ConnectionBar } from './panels/ConnectionBar.tsx';
+import { DataLoggerModal } from './panels/DataLoggerModal.tsx';
 import { generateRoadSnappedRoute } from '../services/googleMaps.ts';
 import { MockTransport } from '../transport/MockTransport.ts';
 import { Ingest } from '../transport/Ingest.ts';
 
-/** Mock transport for web-only (no Electron) dev mode. */
+/** Synthetic drone for web-only (no Electron) dev/preview mode. */
 function setupMockTelemetry(ingestTelemetry: any) {
   const mock = new MockTransport({ rateHz: 20 });
   const ingest = new Ingest();
@@ -21,81 +22,107 @@ function setupMockTelemetry(ingestTelemetry: any) {
   return () => { mock.close().catch(console.error); };
 }
 
+// Drone status → notification config
+const STATUS_MAP: Record<number, { label: string; cls: string; icon: string }> = {
+  1: { label: 'On-Ground',  cls: 'blue',   icon: 'ti-home'               },
+  2: { label: 'Taking Off', cls: 'yellow',  icon: 'ti-arrow-up-circle'    },
+  3: { label: 'In-Air',     cls: 'green',   icon: 'ti-drone'              },
+  4: { label: 'Landing',    cls: 'yellow',  icon: 'ti-arrow-down-circle'  },
+  5: { label: 'Disarming',  cls: 'blue',    icon: 'ti-player-stop'        },
+  6: { label: 'Crashed!',   cls: '',        icon: 'ti-alert-octagon'      }, // default red+pulse
+};
+
 export function App() {
-  const theme = useGcs((s) => s.settings.theme);
-  const lossOfSignal = useGcs((s) => s.lossOfSignal);
-  const telemetry = useGcs((s) => s.telemetry);
+  const theme           = useGcs((s) => s.settings.theme);
+  const lossOfSignal    = useGcs((s) => s.lossOfSignal);
+  const telemetry       = useGcs((s) => s.telemetry);
   const ingestTelemetry = useGcs((s) => s.ingestTelemetry);
-  const setLink = useGcs((s) => s.setLink);
-  const pushLog = useGcs((s) => s.pushLog);
-  const tickWatchdog = useGcs((s) => s.tickWatchdog);
-  const buildUplink = useGcs((s) => s.buildUplink);
-  const waypoints = useGcs((s) => s.waypoints);
-  const setWaypoints = useGcs((s) => s.setWaypoints);
+  const setLink         = useGcs((s) => s.setLink);
+  const pushLog         = useGcs((s) => s.pushLog);
+  const tickWatchdog    = useGcs((s) => s.tickWatchdog);
+  const buildUplink     = useGcs((s) => s.buildUplink);
+  const waypoints       = useGcs((s) => s.waypoints);
+  const setWaypoints    = useGcs((s) => s.setWaypoints);
 
-  const [pidOpen, setPidOpen] = useState(false);
-  const [logging, setLogging] = useState(false);
-  const [terrain, setTerrain] = useState(false);
+  const [pidOpen,    setPidOpen]    = useState(false);
+  const [loggerOpen, setLoggerOpen] = useState(false);
+  const [logging,    setLogging]    = useState(false);
+  const [terrain,    setTerrain]    = useState(false);
+  const [saveDir,    setSaveDir]    = useState<string | undefined>(undefined);
 
-  // apply theme to root
+  // Apply theme attribute to root element
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // wire IPC bridge -> store (graceful fallback for web-only mode)
+  // Wire IPC bridge → store (graceful fallback for web-only mode)
   useEffect(() => {
     if (!window.gcs) {
-      // dev/browser mode: mock the bridge
       setLink('connected');
-      const offTelemetry = setupMockTelemetry(ingestTelemetry);
-      return offTelemetry;
+      const off = setupMockTelemetry(ingestTelemetry);
+      return off;
     }
-    const offT = window.gcs.onTelemetry((t, meta) => ingestTelemetry(t, meta.suspect, meta.reasons));
-    const offL = window.gcs.onLink((status, detail) => {
+    const offT   = window.gcs.onTelemetry((t, meta) =>
+      ingestTelemetry(t, (meta as any).suspect, (meta as any).reasons),
+    );
+    const offL   = window.gcs.onLink((status, detail) => {
       setLink(status);
-      pushLog(status === 'lost' ? 'error' : 'info', `Link ${status}${detail ? ` (${detail})` : ''}`);
+      pushLog(status === 'lost' ? 'error' : 'info',
+        `Link ${status}${detail ? ` (${detail})` : ''}`);
     });
-    const offLog = window.gcs.onLog((e) => pushLog(e.level, e.message));
+    const offLog = window.gcs.onLog((e) => pushLog((e as any).level, (e as any).message));
 
-    // auto-connect using current settings (mock by default)
+    // Auto-connect on startup using current settings (mock by default)
     const { comPort, baudRate, useMockTransport } = useGcs.getState().settings;
     setLink('connecting');
-    window.gcs.connect({ port: comPort, baud: baudRate, mock: useMockTransport }).catch((err) =>
-      pushLog('error', `Connect failed: ${err.message ?? err}`),
-    );
+    window.gcs
+      .connect({ port: comPort, baud: baudRate, mock: useMockTransport })
+      .catch((err) => pushLog('error', `Connect failed: ${err.message ?? err}`));
 
     return () => { offT(); offL(); offLog(); };
   }, [ingestTelemetry, setLink, pushLog]);
 
-  // loss-of-signal watchdog (~10Hz)
+  // Loss-of-signal watchdog (~10 Hz)
   useEffect(() => {
     const id = setInterval(() => tickWatchdog(), 100);
     return () => clearInterval(id);
   }, [tickWatchdog]);
 
-  // low-voltage alarm (D.3 Low_V_Flag analogue: voltage threshold)
-  const lowVoltage = telemetry != null && telemetry.batteryVoltage > 0 && telemetry.batteryVoltage < 14.0;
+  // Bug 6 — threshold corrected to 10 V; clears automatically when voltage recovers
+  const lowVoltage = telemetry != null && telemetry.batteryVoltage > 0 && telemetry.batteryVoltage < 10.0;
+
+  // Bug 1 — drone status notification
+  const droneStatus = telemetry?.droneStatus ?? 0;
+  const statusInfo  = droneStatus > 0 && telemetry ? STATUS_MAP[droneStatus] ?? null : null;
 
   const sendCommand = async (cmd: number, label: string) => {
     try {
       await window.gcs?.sendCommand(buildUplink(cmd));
       pushLog('info', `Command sent: ${label}`);
-    } catch (err) {
+    } catch {
       pushLog('error', `Command failed: ${label}`);
     }
   };
 
-  const toggleLogging = async () => {
+  // Bug 2 — logging split into start / stop so the modal can control them independently
+  const startLog = async () => {
     if (!window.gcs) return;
-    if (!logging) {
-      const { path } = await window.gcs.startLog();
-      pushLog('info', `Logging started → ${path}`);
-      setLogging(true);
-    } else {
-      const { path, rows } = await window.gcs.stopLog();
-      pushLog('info', `Logging stopped (${rows} rows) → ${path}`);
-      setLogging(false);
-    }
+    const { path } = await window.gcs.startLog({ dir: saveDir });
+    pushLog('info', `Logging started → ${path}`);
+    setLogging(true);
+  };
+
+  const stopLog = async () => {
+    if (!window.gcs) return;
+    const { rows } = await window.gcs.stopLog();
+    pushLog('info', `Logging stopped (${rows} rows)`);
+    setLogging(false);
+  };
+
+  const chooseSaveDir = async () => {
+    if (!window.gcs) return;
+    const dir = await window.gcs.chooseSaveDir();
+    if (dir) setSaveDir(dir);
   };
 
   const generateMission = async () => {
@@ -118,17 +145,24 @@ export function App() {
       {/* full-bleed map */}
       <MapPanel terrain={terrain} />
 
-      {/* alarms */}
-      {lossOfSignal && (
-        <div className="alarm" role="alert">
-          <i className="ti ti-antenna-off" aria-hidden="true" /> System disconnected — signal lost
-        </div>
-      )}
-      {!lossOfSignal && lowVoltage && (
-        <div className="alarm" role="alert" style={{ marginTop: lossOfSignal ? 56 : 12 }}>
-          <i className="ti ti-battery-1" aria-hidden="true" /> Low voltage
-        </div>
-      )}
+      {/* alarm stack — all active alarms stack vertically, centred at the top */}
+      <div className="alarm-stack">
+        {lossOfSignal && (
+          <div className="alarm" role="alert">
+            <i className="ti ti-antenna-off" aria-hidden="true" /> Signal lost
+          </div>
+        )}
+        {lowVoltage && (
+          <div className="alarm" role="alert">
+            <i className="ti ti-battery-1" aria-hidden="true" /> Low voltage (&lt;10 V)
+          </div>
+        )}
+        {statusInfo && (
+          <div className={`alarm ${statusInfo.cls}`} role="status">
+            <i className={`ti ${statusInfo.icon}`} aria-hidden="true" /> {statusInfo.label}
+          </div>
+        )}
+      </div>
 
       {/* overlays */}
       <StatusBar />
@@ -136,7 +170,7 @@ export function App() {
 
       <QuickActions
         logging={logging}
-        onToggleLogging={toggleLogging}
+        onOpenLogger={() => setLoggerOpen(true)}
         onGenerateMission={generateMission}
         onToggleTerrain={() => setTerrain((v) => !v)}
         terrainOn={terrain}
@@ -159,10 +193,21 @@ export function App() {
         <MissionLog />
       </div>
 
+      {/* modals */}
       <PidConfigModal
         open={pidOpen}
         onClose={() => setPidOpen(false)}
         onSend={() => sendCommand(0, 'PID update')}
+      />
+
+      <DataLoggerModal
+        open={loggerOpen}
+        onClose={() => setLoggerOpen(false)}
+        logging={logging}
+        saveDir={saveDir}
+        onStartLog={startLog}
+        onStopLog={stopLog}
+        onChooseSaveDir={chooseSaveDir}
       />
     </div>
   );

@@ -10,8 +10,9 @@ const api = {
   connect: (opts: unknown) => ipcRenderer.invoke('connect', opts),
   disconnect: () => ipcRenderer.invoke('disconnect'),
   sendCommand: (cmd: unknown) => ipcRenderer.invoke('send-command', cmd),
-  startLog: () => ipcRenderer.invoke('start-log'),
+  startLog: (opts?: { dir?: string }) => ipcRenderer.invoke('start-log', opts),
   stopLog: () => ipcRenderer.invoke('stop-log'),
+  chooseSaveDir: () => ipcRenderer.invoke('choose-save-dir'),
 
   onTelemetry: (cb: (t: unknown, meta: unknown) => void) => {
     const h = (_e: unknown, t: unknown, meta: unknown) => cb(t, meta);

@@ -1,9 +1,5 @@
 /* ============================================================
    Ground Control Station — design tokens & base styles
-   One palette, one radius scale, one spacing rhythm. Panels are
-   semi-transparent "glass" that float over the full-bleed map and
-   recolor with the theme. Status is encoded by icon shape + color
-   (never color alone) for colorblind safety.
    ============================================================ */
 
 :root {
@@ -22,42 +18,42 @@
   --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
 
   /* semantic status (shared across themes) */
-  --ok: #2bb673;
-  --ok-dim: rgba(43, 182, 115, 0.16);
-  --warn: #e8a13a;
-  --warn-dim: rgba(232, 161, 58, 0.16);
-  --danger: #e2504a;
-  --danger-dim: rgba(226, 80, 74, 0.16);
-  --accent: #4f9bff;
-  --accent-dim: rgba(79, 155, 255, 0.18);
+  --ok:          #2bb673;
+  --ok-dim:      rgba(43, 182, 115, 0.16);
+  --warn:        #e8a13a;
+  --warn-dim:    rgba(232, 161, 58, 0.16);
+  --danger:      #e2504a;
+  --danger-dim:  rgba(226, 80, 74, 0.16);
+  --accent:      #4f9bff;
+  --accent-dim:  rgba(79, 155, 255, 0.18);
 }
 
 /* ---- dark theme (default / mission ops) ---- */
 [data-theme="dark"] {
-  --panel-bg: rgba(18, 24, 21, 0.78);
-  --panel-bg-solid: #14201b;
-  --panel-border: rgba(255, 255, 255, 0.12);
+  --panel-bg:          rgba(18, 24, 21, 0.78);
+  --panel-bg-solid:    #14201b;
+  --panel-border:      rgba(255, 255, 255, 0.12);
   --panel-border-strong: rgba(255, 255, 255, 0.22);
-  --text-primary: #eef2ef;
-  --text-secondary: #aab4ad;
-  --text-tertiary: #76837c;
-  --inset-bg: rgba(0, 0, 0, 0.28);
-  --hover-bg: rgba(255, 255, 255, 0.08);
-  --map-fallback: #172019;
+  --text-primary:      #eef2ef;
+  --text-secondary:    #aab4ad;
+  --text-tertiary:     #76837c;
+  --inset-bg:          rgba(0, 0, 0, 0.28);
+  --hover-bg:          rgba(255, 255, 255, 0.08);
+  --map-fallback:      #172019;
 }
 
 /* ---- light theme (bright daylight field use) ---- */
 [data-theme="light"] {
-  --panel-bg: rgba(255, 255, 255, 0.82);
-  --panel-bg-solid: #ffffff;
-  --panel-border: rgba(20, 30, 25, 0.12);
+  --panel-bg:          rgba(255, 255, 255, 0.82);
+  --panel-bg-solid:    #ffffff;
+  --panel-border:      rgba(20, 30, 25, 0.12);
   --panel-border-strong: rgba(20, 30, 25, 0.22);
-  --text-primary: #16201b;
-  --text-secondary: #4b574f;
-  --text-tertiary: #7a857d;
-  --inset-bg: rgba(20, 30, 25, 0.05);
-  --hover-bg: rgba(20, 30, 25, 0.06);
-  --map-fallback: #dfe6e0;
+  --text-primary:      #16201b;
+  --text-secondary:    #4b574f;
+  --text-tertiary:     #7a857d;
+  --inset-bg:          rgba(20, 30, 25, 0.05);
+  --hover-bg:          rgba(20, 30, 25, 0.06);
+  --map-fallback:      #dfe6e0;
 }
 
 * { box-sizing: border-box; }
@@ -100,7 +96,7 @@ html, body, #root {
   background: transparent; color: var(--text-secondary);
   cursor: pointer; transition: background 0.12s, color 0.12s, transform 0.06s;
 }
-.icon-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
+.icon-btn:hover  { background: var(--hover-bg); color: var(--text-primary); }
 .icon-btn:active { transform: scale(0.94); }
 .icon-btn.active { background: var(--accent-dim); color: var(--accent); }
 .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -116,13 +112,13 @@ html, body, #root {
   font-size: 11px; font-weight: 500; cursor: pointer;
   transition: background 0.12s, transform 0.06s;
 }
-.cmd-btn:hover { background: var(--hover-bg); }
+.cmd-btn:hover  { background: var(--hover-bg); }
 .cmd-btn:active { transform: scale(0.97); }
 .cmd-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.cmd-btn.ok { border-color: var(--ok); color: var(--ok); background: var(--ok-dim); }
-.cmd-btn.danger { border-color: var(--danger); color: var(--danger); background: var(--danger-dim); }
-.cmd-btn.accent { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-.cmd-btn.warn { border-color: var(--warn); color: var(--warn); background: var(--warn-dim); }
+.cmd-btn.ok     { border-color: var(--ok);     color: var(--ok);     background: var(--ok-dim);     }
+.cmd-btn.danger { border-color: var(--danger);  color: var(--danger);  background: var(--danger-dim); }
+.cmd-btn.accent { border-color: var(--accent);  color: var(--accent);  background: var(--accent-dim); }
+.cmd-btn.warn   { border-color: var(--warn);    color: var(--warn);    background: var(--warn-dim);   }
 
 /* ---- metric grid ---- */
 .metric-label { font-size: 9px; color: var(--text-tertiary); letter-spacing: 0.04em; text-transform: uppercase; }
@@ -135,19 +131,40 @@ html, body, #root {
 
 .mono { font-family: var(--font-mono); }
 
-/* ---- alarm banner ---- */
+/* ---- alarm banners ---- */
 @keyframes alarmPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
-.alarm {
-  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+
+/* Container: stacks all active alarms vertically, centred at the top */
+.alarm-stack {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
   margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* Individual pill (default = red + pulsing, for LOS and Crashed) */
+.alarm {
   display: flex; align-items: center; gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-pill);
   background: var(--danger); color: #fff; font-size: 13px; font-weight: 500;
   box-shadow: 0 4px 20px rgba(0,0,0,0.35);
   animation: alarmPulse 1.1s ease-in-out infinite;
-  z-index: 50;
+  white-space: nowrap;
+  pointer-events: auto;
 }
+
+/* Drone status colour variants */
+.alarm.blue   { background: #2563eb; animation: none; }   /* On-Ground, Disarming */
+.alarm.green  { background: var(--ok); animation: none; }  /* In-Air              */
+.alarm.yellow { background: var(--warn); }                  /* Taking Off, Landing  */
 
 @media (prefers-reduced-motion: reduce) {
   .alarm { animation: none; }

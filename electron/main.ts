@@ -1,7 +1,6 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
 
 import { SerialTransport } from '../src/transport/SerialTransport.ts';
 import { MockTransport } from '../src/transport/MockTransport.ts';
@@ -82,9 +81,10 @@ ipcMain.handle('send-command', async (_e, cmd: UplinkCommand) => {
   await transport.write(encodeUplink(cmd));
 });
 
-ipcMain.handle('start-log', async () => {
+ipcMain.handle('start-log', async (_e, opts?: { dir?: string }) => {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const path = join(app.getPath('documents'), 'GCS_Logs', `telemetry_${stamp}.csv`);
+  const dir = opts?.dir ?? join(app.getPath('documents'), 'GCS_Logs');
+  const path = join(dir, `telemetry_${stamp}.csv`);
   await logger.start(path);
   loggingActive = true;
   return { path };
@@ -97,14 +97,17 @@ ipcMain.handle('stop-log', async () => {
   return { path: 'saved', rows };
 });
 
+ipcMain.handle('choose-save-dir', async () => {
+  if (!win) return null;
+  const result = await dialog.showOpenDialog(win, {
+    title: 'Choose folder to save telemetry logs',
+    defaultPath: app.getPath('documents'),
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  return result.canceled ? null : result.filePaths[0];
+});
+
 function createWindow() {
-  let preloadPath = join(__dirname, 'preload.mjs');
-  if (!existsSync(preloadPath)) {
-    preloadPath = join(__dirname, 'preload.js');
-    if (!existsSync(preloadPath)) {
-      preloadPath = join(__dirname, 'preload.cjs');
-    }
-  }
   win = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -113,7 +116,9 @@ function createWindow() {
     backgroundColor: '#14201b',
     title: 'Ground Control Station',
     webPreferences: {
-      preload: join(__dirname, 'preload.cjs'),
+      preload: isDev
+        ? join(__dirname, '../dist-electron/preload.mjs')
+        : join(__dirname, 'preload.mjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
@@ -122,7 +127,6 @@ function createWindow() {
 
   if (isDev) {
     win.loadURL('http://localhost:5173');
-    win.webContents.openDevTools();
   } else {
     win.loadFile(join(__dirname, '../dist/index.html'));
   }

@@ -5,21 +5,27 @@ import type { PidSettings } from '../../state/store.ts';
 /**
  * PID / setpoint tuning (SRS C.4).
  *
- * Fields map 1:1 to the uplink protocol: a single ANG triple, a single POS
- * triple, plus POS_ANG_SP, LAND_SPEED and PSI_SP. Kalman-filter covariance
- * tuning is intentionally absent in v1 — the wire protocol carries no field
- * for it (SRS review §1.7); it will be added once the packet is extended.
+ * The 6 PID gains (angKp…posKd) are now capped at 100 in the UI and sent
+ * with SCALE.PID=1 so the wire value equals what you type.
+ * KF covariance tuning is intentionally absent in v1 — no protocol field.
  */
-const FIELDS: { key: keyof PidSettings; label: string; group: string; step: number }[] = [
-  { key: 'angKp', label: 'Angle Kp', group: 'Angle controller', step: 0.01 },
-  { key: 'angKi', label: 'Angle Ki', group: 'Angle controller', step: 0.01 },
-  { key: 'angKd', label: 'Angle Kd', group: 'Angle controller', step: 0.01 },
-  { key: 'posKp', label: 'Position Kp', group: 'Position controller', step: 0.01 },
-  { key: 'posKi', label: 'Position Ki', group: 'Position controller', step: 0.01 },
-  { key: 'posKd', label: 'Position Kd', group: 'Position controller', step: 0.01 },
-  { key: 'posAngSp', label: 'Pos→Ang setpoint limit', group: 'Setpoints', step: 0.5 },
-  { key: 'landSpeed', label: 'Landing speed (m/s)', group: 'Setpoints', step: 0.05 },
-  { key: 'psiSp', label: 'Yaw setpoint (deg)', group: 'Setpoints', step: 1 },
+const FIELDS: {
+  key: keyof PidSettings;
+  label: string;
+  group: string;
+  step: number;
+  min?: number;
+  max?: number;
+}[] = [
+  { key: 'angKp', label: 'Angle Kp', group: 'Angle controller', step: 0.01, min: 0, max: 100 },
+  { key: 'angKi', label: 'Angle Ki', group: 'Angle controller', step: 0.01, min: 0, max: 100 },
+  { key: 'angKd', label: 'Angle Kd', group: 'Angle controller', step: 0.01, min: 0, max: 100 },
+  { key: 'posKp', label: 'Position Kp', group: 'Position controller', step: 0.01, min: 0, max: 100 },
+  { key: 'posKi', label: 'Position Ki', group: 'Position controller', step: 0.01, min: 0, max: 100 },
+  { key: 'posKd', label: 'Position Kd', group: 'Position controller', step: 0.01, min: 0, max: 100 },
+  { key: 'posAngSp',  label: 'Pos→Ang setpoint limit', group: 'Setpoints', step: 0.5  },
+  { key: 'landSpeed', label: 'Landing speed (m/s)',     group: 'Setpoints', step: 0.05 },
+  { key: 'psiSp',     label: 'Yaw setpoint (deg)',      group: 'Setpoints', step: 1    },
 ];
 
 export function PidConfigModal({
@@ -59,12 +65,17 @@ export function PidConfigModal({
     >
       <div
         className="panel"
-        style={{ width: 420, maxHeight: '82%', overflow: 'auto', padding: 20, background: 'var(--panel-bg-solid)' }}
+        style={{
+          width: 420, maxHeight: '82%', overflow: 'auto',
+          padding: 20, background: 'var(--panel-bg-solid)',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ fontSize: 16, fontWeight: 500, margin: 0 }}>Parameter tuning</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close"><i className="ti ti-x" aria-hidden="true" /></button>
+          <button className="icon-btn" onClick={onClose} aria-label="Close">
+            <i className="ti ti-x" aria-hidden="true" />
+          </button>
         </div>
 
         {groups.map((g) => (
@@ -77,12 +88,18 @@ export function PidConfigModal({
                   <input
                     type="number"
                     step={f.step}
+                    min={f.min ?? undefined}
+                    max={f.max ?? undefined}
                     value={draft[f.key]}
-                    onChange={(e) => setDraft({ ...draft, [f.key]: Number(e.target.value) })}
+                    onChange={(e) =>
+                      setDraft({ ...draft, [f.key]: Number(e.target.value) })
+                    }
                     style={{
                       width: '100%', marginTop: 4, padding: '6px 8px',
-                      background: 'var(--inset-bg)', border: '0.5px solid var(--panel-border-strong)',
-                      borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)',
+                      background: 'var(--inset-bg)',
+                      border: '0.5px solid var(--panel-border-strong)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--text-primary)',
                       fontFamily: 'var(--font-mono)', fontSize: 13,
                     }}
                   />
@@ -93,10 +110,20 @@ export function PidConfigModal({
         ))}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <button className="cmd-btn accent" style={{ flex: 1, flexDirection: 'row', gap: 6 }} onClick={apply}>
+          <button
+            className="cmd-btn accent"
+            style={{ flex: 1, flexDirection: 'row', gap: 6 }}
+            onClick={apply}
+          >
             <i className="ti ti-upload" aria-hidden="true" /> Apply & send to drone
           </button>
-          <button className="cmd-btn" style={{ flexDirection: 'row', padding: '8px 16px' }} onClick={onClose}>Cancel</button>
+          <button
+            className="cmd-btn"
+            style={{ flexDirection: 'row', padding: '8px 16px' }}
+            onClick={onClose}
+          >
+            Cancel
+          </button>
         </div>
       </div>
     </div>

@@ -20,11 +20,17 @@ export function AttitudePanel() {
 
 export function ClockPanel() {
   const now = new Date();
-  const time = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
-  const date = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const time = now.toLocaleTimeString('en-US', {
+    hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true,
+  });
+  const date = now.toLocaleDateString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
   return (
     <Panel style={{ textAlign: 'center', padding: '7px 10px' }}>
-      <span className="mono" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{date} · {time}</span>
+      <span className="mono" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+        {date} · {time}
+      </span>
     </Panel>
   );
 }
@@ -32,15 +38,17 @@ export function ClockPanel() {
 export function TelemetryCard() {
   const t = useThrottledTelemetry();
   const altTarget = t?.altitudeCmd ?? 0;
-  const groundSpeed = magnitude(t?.posXFb, t?.posYFb); // placeholder derivation
+  const groundSpeed = magnitude(t?.posXFb, t?.posYFb);
+
   const rows: [string, string][] = [
-    ['battery', t ? `${t.batteryVoltage.toFixed(1)} V · ${batteryPct(t.batteryVoltage)}%` : '—'],
+    ['battery',    t ? `${t.batteryVoltage.toFixed(1)} V · ${batteryPct(t.batteryVoltage)}%` : '—'],
     ['satellites', t ? `${t.satellitesNum}` : '—'],
     ['ground spd', `${groundSpeed.toFixed(1)} m/s`],
-    ['vert spd', `${(t?.altitudeCmd != null && t?.altitudeFb != null ? 0 : 0).toFixed(1)} m/s`],
-    ['altitude', t ? `${t.altitudeFb.toFixed(1)} m` : '—'],
-    ['alt target', `${altTarget.toFixed(1)} m`],
+    ['vert spd',   '—'],
+    ['altitude',   t ? formatAltitude(t.altitudeFb) : '—'],
+    ['alt target', formatAltitude(altTarget)],
   ];
+
   return (
     <Panel>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
@@ -55,18 +63,25 @@ export function TelemetryCard() {
   );
 }
 
-export function FlightControls({ onCommand }: { onCommand: (cmd: number, label: string) => void }) {
+export function FlightControls({
+  onCommand,
+}: {
+  onCommand: (cmd: number, label: string) => void;
+}) {
   const link = useGcs((s) => s.link);
   const disabled = link !== 'connected';
+
+  // ARM removed — drone arms automatically on boot.
+  // Values match firmware stateflow: DISARM=0, LAND=1, TAKEOFF=2
   const btns: { cmd: number; label: string; icon: string; cls: string }[] = [
-    { cmd: DRONE_CMD.ARM, label: 'Arm', icon: 'ti-power', cls: 'ok' },
-    { cmd: DRONE_CMD.DISARM, label: 'Disarm', icon: 'ti-player-stop', cls: 'danger' },
-    { cmd: DRONE_CMD.TAKEOFF, label: 'Takeoff', icon: 'ti-arrow-up-circle', cls: 'accent' },
-    { cmd: DRONE_CMD.LAND, label: 'Land', icon: 'ti-arrow-down-circle', cls: 'warn' },
+    { cmd: DRONE_CMD.DISARM,  label: 'Disarm',  icon: 'ti-player-stop',     cls: 'danger' },
+    { cmd: DRONE_CMD.TAKEOFF, label: 'Takeoff', icon: 'ti-arrow-up-circle',  cls: 'accent' },
+    { cmd: DRONE_CMD.LAND,    label: 'Land',    icon: 'ti-arrow-down-circle', cls: 'warn'  },
   ];
+
   return (
     <Panel title="Controls & flight modes">
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
         {btns.map((b) => (
           <button
             key={b.cmd}
@@ -84,10 +99,21 @@ export function FlightControls({ onCommand }: { onCommand: (cmd: number, label: 
   );
 }
 
+/**
+ * altitudeFb comes from the TF-Luna LiDAR in centimetres.
+ * Display as cm while ≤ 100, then convert to metres above that.
+ * Examples: 20 → "20 cm", 120 → "1.20 m"
+ */
+function formatAltitude(cm: number): string {
+  if (cm <= 100) return `${Math.round(cm)} cm`;
+  return `${(cm / 100).toFixed(2)} m`;
+}
+
 function magnitude(a?: number, b?: number): number {
   return Math.hypot(a ?? 0, b ?? 0);
 }
+
 function batteryPct(volts: number): number {
-  // crude 4S LiPo mapping 13.6 (0%) .. 16.8 (100%)
+  // crude 4S LiPo mapping 13.6 V (0 %) .. 16.8 V (100 %)
   return Math.max(0, Math.min(100, Math.round(((volts - 13.6) / (16.8 - 13.6)) * 100)));
 }

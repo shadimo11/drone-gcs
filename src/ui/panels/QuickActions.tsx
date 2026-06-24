@@ -10,14 +10,14 @@ export interface QuickAction {
 
 export function QuickActions({
   logging,
-  onToggleLogging,
+  onOpenLogger,
   onGenerateMission,
   onToggleTerrain,
   terrainOn,
   onOpenPid,
 }: {
   logging: boolean;
-  onToggleLogging: () => void;
+  onOpenLogger: () => void;
   onGenerateMission: () => void;
   onToggleTerrain: () => void;
   terrainOn: boolean;
@@ -27,16 +27,38 @@ export function QuickActions({
   const updateSettings = useGcs((s) => s.updateSettings);
 
   const actions: QuickAction[] = [
-    { id: 'log', icon: 'ti-clipboard-list', label: 'Data logging', active: logging, onClick: onToggleLogging },
-    { id: 'mission', icon: 'ti-route', label: 'Generate mission path', onClick: onGenerateMission },
+    {
+      id: 'log',
+      icon: 'ti-clipboard-list',
+      label: 'Data logger',
+      active: logging,
+      onClick: onOpenLogger,
+    },
+    {
+      id: 'mission',
+      icon: 'ti-route',
+      label: 'Generate mission path',
+      onClick: onGenerateMission,
+    },
     {
       id: 'theme',
       icon: theme === 'dark' ? 'ti-moon' : 'ti-sun',
       label: 'Toggle dark / light mode',
       onClick: () => updateSettings({ theme: theme === 'dark' ? 'light' : 'dark' }),
     },
-    { id: 'terrain', icon: 'ti-mountain', label: 'Terrain view', active: terrainOn, onClick: onToggleTerrain },
-    { id: 'pid', icon: 'ti-adjustments-horizontal', label: 'PID configuration', onClick: onOpenPid },
+    {
+      id: 'terrain',
+      icon: 'ti-mountain',
+      label: 'Terrain view',
+      active: terrainOn,
+      onClick: onToggleTerrain,
+    },
+    {
+      id: 'pid',
+      icon: 'ti-adjustments-horizontal',
+      label: 'PID configuration',
+      onClick: onOpenPid,
+    },
   ];
 
   return (
