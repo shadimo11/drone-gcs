@@ -121,7 +121,7 @@ export class MockTransport extends TinyEmitter<TransportEvents> implements Trans
     out[i++] = Math.round(this.battery * 10) & 0xff;
     const sats = 9;
     const posConEn = 1;
-    const status = 4; // e.g. "in mission"
+    const status = 3; // e.g. "in mission"
     out[i++] = ((sats & 0x0f) << 4) | ((posConEn & 0x01) << 3) | (status & 0x07);
 
     out[i++] = TERMINATOR_BYTES[0];

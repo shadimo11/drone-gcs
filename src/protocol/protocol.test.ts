@@ -85,28 +85,32 @@ test('int32 round-trips across the signed range', () => {
 /* ----------------------------- uplink ----------------------------- */
 
 test('uplink packet is exactly 21 bytes and correctly framed', () => {
+  // Bug 3: ARM removed. Using TAKEOFF (2) as a representative command.
+  // Bug 4: SCALE.PID = 1, so gains are sent as-is (no x1000 multiplier).
   const cmd: UplinkCommand = {
-    droneCmd: DRONE_CMD.ARM,
-    angKp: 1.234,
-    angKi: 0.5,
-    angKd: 0.05,
-    posKp: 2.0,
-    posKi: 0.1,
-    posKd: 0.0,
+    droneCmd: DRONE_CMD.TAKEOFF,
+    angKp: 50,
+    angKi: 10,
+    angKd: 5,
+    posKp: 20,
+    posKi: 1,
+    posKd: 0,
     posAngSp: 15,
     landSpeed: 0.5,
     psiSp: 90,
   };
   const pkt = encodeUplink(cmd);
   assert.equal(pkt.length, UPLINK_PACKET_SIZE);
+  // header
   assert.equal(pkt[0], 252);
   assert.equal(pkt[1], 24);
+  // terminator
   assert.equal(pkt[19], 248);
   assert.equal(pkt[20], 48);
-  // Drone_CMD lands in byte 2
-  assert.equal(pkt[2], DRONE_CMD.ARM);
-  // ANG_KP = 1.234 * 1000 = 1234 -> int16 BE
-  assert.deepEqual([pkt[3], pkt[4]], int16ToBytesBE(1234));
+  // Drone_CMD lands in byte 2 — TAKEOFF = 2
+  assert.equal(pkt[2], DRONE_CMD.TAKEOFF);
+  // ANG_KP = 50 * 1 = 50 -> int16 BE [0, 50]
+  assert.deepEqual([pkt[3], pkt[4]], int16ToBytesBE(50));
   // POS_ANG_SP = 15 * 10 = 150 (uint8 byte 15)
   assert.equal(pkt[15], 150);
   // LAND_SPEED = 0.5 * 100 = 50 (uint8 byte 16)
@@ -132,7 +136,7 @@ const sampleTelemetry: Telemetry = {
   batteryVoltage: 15.2,
   satellitesNum: 9,
   posConEn: 1,
-  droneStatus: 4,
+  droneStatus: 3, // In-Air
 };
 
 test('downlink decode round-trips a clean frame within scaling tolerance', () => {
@@ -157,14 +161,14 @@ test('downlink decode round-trips a clean frame within scaling tolerance', () =>
   // packed status fields exact
   assert.equal(t.satellitesNum, 9);
   assert.equal(t.posConEn, 1);
-  assert.equal(t.droneStatus, 4);
+  assert.equal(t.droneStatus, 3);
 });
 
 test('southern/western hemisphere coordinates keep their sign', () => {
   const south: Telemetry = {
     ...sampleTelemetry,
-    latitude: -33.8688, // Sydney
-    longitude: -70.6483, // (deliberately negative lon)
+    latitude: -33.8688,  // Sydney
+    longitude: -70.6483, // deliberately negative lon
   };
   const res = decodeDownlink(refEncodeDownlink(south));
   assert.ok(res);
