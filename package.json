@@ -1,0 +1,35 @@
+{
+  "name": "drone-gcs",
+  "version": "1.0.0",
+  "description": "Ground Control Station for an autonomous quadcopter (Simulink/Arduino Due flight controller).",
+  "author": "Marwan",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test --experimental-strip-types src/protocol/protocol.test.ts",
+    "package": "vite build && electron-builder --win --x64"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "serialport": "^12.0.0",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@types/google.maps": "^3.58.1",
+    "@types/node": "^22.7.4",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "electron": "^32.1.2",
+    "electron-builder": "^25.1.7",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8",
+    "vite-plugin-electron": "^0.28.8",
+    "vite-plugin-electron-renderer": "^0.14.6"
+  }
+}
