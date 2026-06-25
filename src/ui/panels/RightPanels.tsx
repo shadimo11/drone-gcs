@@ -38,13 +38,12 @@ export function ClockPanel() {
 export function TelemetryCard() {
   const t = useThrottledTelemetry();
   const altTarget = t?.altitudeCmd ?? 0;
-  const groundSpeed = magnitude(t?.posXFb, t?.posYFb);
 
   const rows: [string, string][] = [
     ['battery',    t ? `${t.batteryVoltage.toFixed(1)} V · ${batteryPct(t.batteryVoltage)}%` : '—'],
     ['satellites', t ? `${t.satellitesNum}` : '—'],
-    ['ground spd', `${groundSpeed.toFixed(1)} m/s`],
-    ['vert spd',   '—'],
+    ['ground spd', '---'],   // velocity not in current downlink protocol
+    ['vert spd',   '---'],   // velocity not in current downlink protocol
     ['altitude',   t ? formatAltitude(t.altitudeFb) : '—'],
     ['alt target', formatAltitude(altTarget)],
   ];
@@ -109,11 +108,8 @@ function formatAltitude(cm: number): string {
   return `${(cm / 100).toFixed(2)} m`;
 }
 
-function magnitude(a?: number, b?: number): number {
-  return Math.hypot(a ?? 0, b ?? 0);
-}
 
 function batteryPct(volts: number): number {
-  // crude 4S LiPo mapping 13.6 V (0 %) .. 16.8 V (100 %)
-  return Math.max(0, Math.min(100, Math.round(((volts - 13.6) / (16.8 - 13.6)) * 100)));
+  // 3S LiPo: 12.6 V = 100 %, 9.0 V = 0 %
+  return Math.max(0, Math.min(100, Math.round(((volts - 9.0) / (12.6 - 9.0)) * 100)));
 }

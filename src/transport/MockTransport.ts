@@ -29,7 +29,7 @@ export class MockTransport extends TinyEmitter<TransportEvents> implements Trans
   private timer: ReturnType<typeof setInterval> | null = null;
   private opts: Required<MockOptions>;
   private t = 0;
-  private battery = 16.4;
+  private battery = 12.6;
   private opened = false;
 
   constructor(opts: MockOptions = {}) {
@@ -78,7 +78,7 @@ export class MockTransport extends TinyEmitter<TransportEvents> implements Trans
 
   private tick(): void {
     this.t += 1 / this.opts.rateHz;
-    this.battery = Math.max(13.6, this.battery - 0.0005);
+    this.battery = Math.max(8.5, this.battery - 0.0003);
 
     const r = 0.0009; // ~100m orbit radius
     const lat = this.opts.centerLat + r * Math.sin(this.t * 0.15);

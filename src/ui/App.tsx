@@ -35,6 +35,7 @@ const STATUS_MAP: Record<number, { label: string; cls: string; icon: string }> =
 export function App() {
   const theme           = useGcs((s) => s.settings.theme);
   const lossOfSignal    = useGcs((s) => s.lossOfSignal);
+  const link            = useGcs((s) => s.link);
   const telemetry       = useGcs((s) => s.telemetry);
   const ingestTelemetry = useGcs((s) => s.ingestTelemetry);
   const setLink         = useGcs((s) => s.setLink);
@@ -92,9 +93,12 @@ export function App() {
   const lowVoltage = telemetry != null && telemetry.batteryVoltage > 0 && telemetry.batteryVoltage < 10.0;
 
   // Bug 1 — drone status notification
+  // Bug 1 — drone status notification (cleared when link is not active)
   const droneStatus = telemetry?.droneStatus ?? 0;
-  const statusInfo  = droneStatus > 0 && telemetry ? STATUS_MAP[droneStatus] ?? null : null;
-
+  const isLiveLink  = link === 'connected' || link === 'lost';
+  const statusInfo  = droneStatus > 0 && telemetry && isLiveLink
+    ? STATUS_MAP[droneStatus] ?? null
+    : null;
   const sendCommand = async (cmd: number, label: string) => {
     try {
       await window.gcs?.sendCommand(buildUplink(cmd));
@@ -119,10 +123,9 @@ export function App() {
     setLogging(false);
   };
 
-  const chooseSaveDir = async () => {
-    if (!window.gcs) return;
-    const dir = await window.gcs.chooseSaveDir();
-    if (dir) setSaveDir(dir);
+  const chooseSaveDir = (dir: string) => {
+    setSaveDir(dir);
+    pushLog('info', `Save location set → ${dir}`);
   };
 
   const generateMission = async () => {

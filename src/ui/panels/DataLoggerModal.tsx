@@ -125,9 +125,31 @@ function drawChart(
   }
 
   // Placeholder when no data yet
+  // No data overlay
   if (vis.length === 0) {
     ctx.fillStyle = textC; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('Waiting for telemetry…', pad.left + cW / 2, pad.top + cH / 2);
+  }
+
+  // Current-value readout — top-left corner of the chart area
+  if (vis.length > 0) {
+    const last = vis[vis.length - 1];
+    const overlayText = `t: ${last.t.toFixed(2)} s   val: ${last.v.toFixed(3)}`;
+    const ox = pad.left + 6;
+    const oy = pad.top + 6;
+    const oh = 18;
+    ctx.font = '10px "JetBrains Mono", "Cascadia Code", ui-monospace, monospace';
+    const tw = ctx.measureText(overlayText).width;
+    // Background pill
+    ctx.fillStyle = isDark ? 'rgba(20,32,27,0.88)' : 'rgba(255,255,255,0.88)';
+    ctx.beginPath();
+    ctx.roundRect(ox, oy, tw + 12, oh, 4);
+    ctx.fill();
+    // Text
+    ctx.fillStyle = lineC;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(overlayText, ox + 6, oy + oh / 2);
   }
 }
 
@@ -146,7 +168,7 @@ export function DataLoggerModal({
   saveDir?: string;
   onStartLog: () => void;
   onStopLog: () => void;
-  onChooseSaveDir: () => void;
+  onChooseSaveDir: (dir: string) => void;
 }) {
   const [tab, setTab] = useState<'plot' | 'record'>('plot');
   const [field, setField] = useState<keyof Telemetry>('altitudeFb');
@@ -191,6 +213,20 @@ export function DataLoggerModal({
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [open, tab, field, isDark]);
+
+  const folderInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    // Electron adds a real filesystem .path to every File object
+    const file = files[0] as File & { path: string };
+    if (!file.path) return;
+    const sep = file.path.includes('\\') ? '\\' : '/';
+    const dir = file.path.substring(0, file.path.lastIndexOf(sep));
+    onChooseSaveDir(dir);
+    e.target.value = ''; // reset so the same folder can be re-selected
+  };
 
   if (!open) return null;
 
@@ -304,10 +340,19 @@ export function DataLoggerModal({
                 >
                   {saveDir ?? 'Documents\\GCS_Logs  (default)'}
                 </span>
+                {/* Hidden folder picker — uses Electron's File.path for the real filesystem path */}
+                <input
+                  ref={folderInputRef}
+                  type="file"
+                  // @ts-ignore — webkitdirectory is non-standard but fully supported in Electron/Chrome
+                  webkitdirectory=""
+                  style={{ display: 'none' }}
+                  onChange={handleFolderSelect}
+                />
                 <button
                   className="cmd-btn"
                   style={{ flexDirection: 'row', gap: 6, padding: '6px 14px', whiteSpace: 'nowrap' }}
-                  onClick={onChooseSaveDir}
+                  onClick={() => folderInputRef.current?.click()}
                   disabled={logging}
                 >
                   <i className="ti ti-folder-open" aria-hidden="true" /> Browse…

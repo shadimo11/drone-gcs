@@ -18,7 +18,7 @@ export function StatusBar() {
   const satStatus = sats >= 6 ? 'ok' : sats >= 4 ? 'warn' : 'danger';
 
   const volts = t?.batteryVoltage ?? 0;
-  const battStatus = volts >= 14.8 ? 'ok' : volts >= 14.0 ? 'warn' : 'danger';
+  const battStatus = volts >= 11.5 ? 'ok' : volts >= 10.5 ? 'warn' : 'danger';
 
   return (
     <Panel
