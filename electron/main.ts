@@ -116,9 +116,7 @@ function createWindow() {
     backgroundColor: '#14201b',
     title: 'Ground Control Station',
     webPreferences: {
-      preload: isDev
-        ? join(__dirname, '../dist-electron/preload.mjs')
-        : join(__dirname, 'preload.mjs'),
+      preload: join(__dirname, 'preload.cjs'), // <--- Keep this as .cjs
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
