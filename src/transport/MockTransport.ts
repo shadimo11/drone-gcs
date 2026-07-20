@@ -36,8 +36,8 @@ export class MockTransport extends TinyEmitter<TransportEvents> implements Trans
     super();
     this.opts = {
       rateHz: 20,
-      centerLat: 30.0444,
-      centerLon: 31.2357,
+      centerLat: 30.1743468,
+      centerLon: 31.4312601,
       ...opts,
     };
   }
